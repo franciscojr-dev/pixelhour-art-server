@@ -9,13 +9,30 @@ console.log(`Started :${server.options.port}`);
 server.on('connection', (socket) => {
     sockets.push(socket);
 
-    console.log('Connect');
+    console.log('New client connected!');
+    sendData(socket, {status: "ok"});
     
-    socket.on('message', (msg) => {
-        sockets.forEach(s => s.send(msg));
+    socket.on('message', (data) => {
+        try {
+            let content = JSON.parse(data);
+
+            if (content.type !== 'register') {
+                return;
+            }
+    
+            sockets.forEach(s => sendData(s, content));
+        } catch (e) {
+            console.log('Not allowed message format!');
+        }
     });
     
     socket.on('close', () => {
         sockets = sockets.filter(s => s !== socket);
     });
 });
+
+function sendData(socket, content) {
+    socket.send(
+        JSON.stringify(content)
+    );
+}
