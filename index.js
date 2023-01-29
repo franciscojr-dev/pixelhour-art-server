@@ -5,22 +5,24 @@ const server = new WebSocket.Server({
 const balanceDefault = process.env.BALANCE_DEFAULT || 100;
 let sockets = [];
 let pixelStorage = [];
+let totalOn = 0;
 
 console.log(`Started :${server.options.port}`);
 
 server.on('connection', (socket) => {
     sockets.push({socket, balance: balanceDefault});
-
-    console.log('New client connected!');
+    totalOn += 1;
 
     sendData(
         socket,
         {
             type: "load",
             balance: balanceDefault,
+            total_active: totalOn,
             data: pixelStorage
         }
     );
+    updateOn();
     
     socket.on('message', (data) => {
         try {
@@ -38,7 +40,14 @@ server.on('connection', (socket) => {
                         s.balance -= s.balance > 0 ? 1 : 0;
                     }
 
-                    sendData(s.socket, {...content, balance: s.balance});
+                    sendData(
+                        s.socket,
+                        {
+                            ...content,
+                            balance: s.balance,
+                            total_active: totalOn
+                        }
+                    );
                 }
             );
         } catch (e) {
@@ -48,8 +57,26 @@ server.on('connection', (socket) => {
     
     socket.on('close', () => {
         sockets = sockets.filter(s => s.socket !== socket);
+        totalOn -= totalOn ? 1 : 0;
+
+        updateOn();
     });
 });
+
+function updateOn() {
+    sockets.forEach(
+        s => {
+            sendData(
+                s.socket,
+                {
+                    type: "update",
+                    balance: s.balance,
+                    total_active: totalOn
+                }
+            );
+        }
+    );
+}
 
 function sendData(socket, content) {
     socket.send(
