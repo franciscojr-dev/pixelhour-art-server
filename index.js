@@ -4,6 +4,8 @@ const server = new WebSocket.Server({
 });
 let sockets = [];
 
+console.log(`Started :${server.options.port}`);
+
 server.on('connection', (socket) => {
     sockets.push(socket);
 
